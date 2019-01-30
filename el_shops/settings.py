@@ -70,7 +70,7 @@ ITEM_PIPELINES = {
 }
 
 IMAGES_STORE = '/Users/olegtarasenko/repos/el_shops/images'
-CLOSESPIDER_PAGECOUNT = 2000
+CLOSESPIDER_PAGECOUNT = 100
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html
