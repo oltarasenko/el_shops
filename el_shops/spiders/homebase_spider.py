@@ -21,10 +21,14 @@ class HomeBaseSpider(scrapy.Spider):
             "#tab-description .product-details__description::text").extract_first()
         url = response.url
         image_urls = response.css("img.rsTmb::attr(src)").extract()
+        category = response.css('.breadcrumb span::text').extract()[:-1]
+        yield Product(id=id, name=name, price=price, descr=descr, url=url, image_urls=image_urls, category="->".join(category))
 
-        yield Product(id=id, name=name, price=price, descr=descr, url=url, image_urls=image_urls)
-
-        urls = response.css("a.product-list__link::attr(href)").extract()
+        urls = []
+        urls.extend(response.css("a.category-block-heading__title").extract())
+        urls.extend(response.css("a.view-more").extract())
+        urls.extend(response.css("a.product-list__link::attr(href)").extract())
+        # urls = response.css("a.product-list__link::attr(href)").extract()
         for url in urls:
             next_page = response.urljoin(url)
             yield scrapy.Request(url=next_page, callback=self.parse)

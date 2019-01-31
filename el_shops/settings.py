@@ -65,12 +65,13 @@ ROBOTSTXT_OBEY = True
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'el_shops.pipelines.DropNonProductsPipeline': 300,
+    'el_shops.pipelines.DropNonProductsPipeline': 300
+    # 'el_shops.pipelines.DropNonElectricalsPipeline': 400
     # 'scrapy.pipelines.images.ImagesPipeline': 1
 }
 
 IMAGES_STORE = '/Users/olegtarasenko/repos/el_shops/images'
-CLOSESPIDER_PAGECOUNT = 100
+CLOSESPIDER_PAGECOUNT = 10000
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html

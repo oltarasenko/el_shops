@@ -20,3 +20,11 @@ class DropNonProductsPipeline(object):
         if item['id'] is None:
             raise DropItem("Drop empty product: %s" % item)
         return item
+
+
+class DropNonElectricalsPipeline(object):
+
+    def process_item(self, item, spider):
+        if item['category'].find("Electrical") == -1:
+            raise DropItem("Drop not electrical product: %s" % item)
+        return item
