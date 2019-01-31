@@ -52,14 +52,19 @@ def load_dictionary(dictionary_path):
     return dictionary
 
 
-tokenizer = Tokenizer(num_words=MAX_WORDS)
-dictionary = load_dictionary('dictionary.json')
-model = load_model('model.json')
-sample_string = "Bring nature and calm to your bathroom with this unique natural oak finish"
-input_array = convert_text_to_index_array(sample_string, dictionary)
-input_sequence = tokenizer.sequences_to_matrix([input_array], mode='binary')
+def main(string_to_classify):
+    tokenizer = Tokenizer(num_words=MAX_WORDS)
+    dictionary = load_dictionary('dictionary.json')
+    model = load_model('model.json')
+    # sample_string = "Bring nature and calm to your bathroom with this unique natural oak finish"
+    # sample_string = "The striking finish of the hacienda black creates a warming yet impactful effect to your bathroom."
+    input_array = convert_text_to_index_array(string_to_classify, dictionary)
+    input_sequence = tokenizer.sequences_to_matrix(
+        [input_array], mode='binary')
 
-pred = model.predict(input_sequence)
+    pred = model.predict(input_sequence)
 
-print("Item: %s, %s category; %f%% confidence" %
-      (sample_string, get_category_name([np.argmax(pred)]), pred[0][np.argmax(pred)] * 100))
+    print("Item: %s\n, Category: %s; %f%% confidence" %
+          (string_to_classify, get_category_name([np.argmax(pred)]), pred[0][np.argmax(pred)] * 100))
+
+    return get_category_name([np.argmax(pred)])
