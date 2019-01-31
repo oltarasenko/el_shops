@@ -89,7 +89,6 @@ def convert_text_to_index_array(dictionary, text):
 
 def read_data(path, keys):
     data = pd.read_csv(path)
-    # print data
     data_set = []
     for _index, row in data.iterrows():
         items = []
