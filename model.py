@@ -1,3 +1,4 @@
+import time
 from tensorflow.keras import backend as K
 import ipdb
 from tensorflow.keras.layers import Dense, Dropout, Activation
@@ -46,11 +47,8 @@ def build_words_tokenizer(data):
 # Take input data & convert it to format clear to NN
 def data_to_indicies(data, tokenizer):
     allWordIndices = []
-
     for text in data:
         word = convert_text_to_index_array(tokenizer.word_index, text)
-        # print "[error]", word
-        # if word in tokenizer.word_index:
         allWordIndices.append(word)
 
     allWordIndices = np.asarray(allWordIndices)
@@ -69,12 +67,24 @@ def test_data_to_indicies(data, tokenizer):
     allWordIndices = np.asarray(allWordIndices)
     return tokenizer.sequences_to_matrix(allWordIndices, mode='binary')
 
+# Takes
+
+
+def test_data_to_indicies(data, tokenizer):
+    allWordIndices = []
+    for text in data:
+        word = convert_text_to_index_array(tokenizer.word_index, text)
+        allWordIndices.append(word)
+
+    allWordIndices = np.asarray(allWordIndices)
+    return tokenizer.sequences_to_matrix(allWordIndices, mode='binary')
+
 
 def convert_text_to_index_array(dictionary, text):
     # one really important thing that `text_to_word_sequence` does
     # is make all texts the same length -- in this case, the length
     # of the longest text in the set.
-    return [dictionary[word] for word in kpt.text_to_word_sequence(text)]
+    return [dictionary[word] for word in kpt.text_to_word_sequence(text) if dictionary.has_key(word)]
 
 
 def read_data(path, keys):
@@ -104,7 +114,7 @@ def make_model(data, labels):
 
     model.fit(data, labels,
               batch_size=500,
-              epochs=10,
+              epochs=4,
               verbose=1,
               validation_split=0.1,
               shuffle=True)
@@ -148,6 +158,7 @@ text = np.asarray([data[0] for data in data_set])
 training_labels = np.array([get_label(i[1]) for i in data_set])
 
 tokenizer = build_words_tokenizer(text)
+
 training_data = data_to_indicies(text, tokenizer)
 model = make_model(training_data, training_labels)
 model.summary()
@@ -156,15 +167,27 @@ frozen_graph = freeze_session(K.get_session(),
 
 tf.train.write_graph(frozen_graph, "", "categorization.pb", as_text=False)
 
+data_set = read_data(testing_data, ['descr', 'category_extracted'])
 
-testing_set = read_data(testing_data, ['descr', ])
-# ipdb.set_trace()
-item = testing_set[2][0]
-print "Testing set:", item
+testing_text = np.asarray([data[0] for data in data_set])
+testing_labels = np.array([get_label(i[1]) for i in data_set])
 
-item_indices = test_data_to_indicies(item, tokenizer)
+# print map_data(testing_text, tokenizer)
+
+print "[error] Evaluating the model"
+time.sleep(5)
+
+test_loss, test_acc = model.evaluate(
+    data_to_indicies(testing_text, tokenizer), testing_labels)
+
+print "Loss: ", test_loss, "Accuracy:", test_acc
+# # ipdb.set_trace()
+# item = testing_set[2][0]
+# print "Testing set:", item
+
+# item_indices = test_data_to_indicies(item, tokenizer)
 # print item_indices
-pred = model.predict(item_indices)
+# pred = model.predict(item_indices)
 # ipdb.set_trace()
-print("%s item; category: %s, %f%% confidence" %
-      (item, get_category_name(training_labels[np.argmax(pred)]), pred[0][np.argmax(pred)] * 100))
+# print("%s item; category: %s, %f%% confidence" %
+#       (item, get_category_name(training_labels[np.argmax(pred)]), pred[0][np.argmax(pred)] * 100))
