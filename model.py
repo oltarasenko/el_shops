@@ -1,3 +1,4 @@
+from tensorflow.keras import backend as K
 import ipdb
 from tensorflow.keras.layers import Dense, Dropout, Activation
 from tensorflow.keras.models import Sequential
@@ -7,20 +8,23 @@ import tensorflow.keras.preprocessing.text as kpt
 from tensorflow.keras.preprocessing.text import Tokenizer
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 from random import shuffle
 
-CATEGORIES = {
-    'shoes': [1, 0, 0, 0, 0, 0, 0],
-    'heater': [0, 1, 0, 0, 0, 0, 0],
-    'lights': [0, 0, 1, 0, 0, 0, 0],
-    'other': [0, 0, 0, 1, 0, 0, 0],
-    'camera': [0, 0, 0, 0, 1, 0, 0],
-    'watch': [0, 0, 0, 0, 0, 1, 0],
-    'cleaning': [0, 0, 0, 0, 0, 0, 1]}
+MAX_WORDS = 5000
 
-training_data = "/Users/olegtarasenko/repos/el_shops/training_data/trainig_data_prepared.csv"
-testing_data = "/Users/olegtarasenko/repos/el_shops/testing_data/homebase2.csv"
+CATEGORIES = {
+    'Bathroom furniture suites': [1, 0, 0, 0, 0, 0, 0],
+    'Paint': [0, 1, 0, 0, 0, 0, 0],
+    'Doors & door furniture': [0, 0, 1, 0, 0, 0, 0],
+    'Kitchen worktops': [0, 0, 0, 1, 0, 0, 0],
+    'Garden buildings': [0, 0, 0, 0, 1, 0, 0],
+    'Plumbing': [0, 0, 0, 0, 0, 1, 0],
+    'Power tools': [0, 0, 0, 0, 0, 0, 1]}
+
+training_data = "/Users/olegtarasenko/repos/el_shops/training_set.csv"
+testing_data = "/Users/olegtarasenko/repos/el_shops/testing_set.csv"
 
 
 def get_label(name):
@@ -34,8 +38,7 @@ def get_category_name(searched_label):
 
 
 def build_words_tokenizer(data):
-    max_words = 3000
-    tokenizer = Tokenizer(num_words=max_words)
+    tokenizer = Tokenizer(num_words=MAX_WORDS)
     tokenizer.fit_on_texts(data)
     return tokenizer
 
@@ -60,8 +63,6 @@ def test_data_to_indicies(data, tokenizer):
     allWordIndices = []
 
     for word in words:
-        # word = convert_text_to_index_array(tokenizer.word_index, text)
-        # print "[error]", word
         if word in tokenizer.word_index:
             allWordIndices.append(word)
 
@@ -86,46 +87,12 @@ def read_data(path, keys):
             items.append(row[key])
         data_set.append(items)
 
-    # data = [(row['descr'], row['category'])
-    #         for _index, row in data.iterrows()]
     return data_set
-
-
-def prepare_data(path):
-
-    # shuffle data in place... to make learning better
-    shuffle(data)
-
-    # Prepare train labels
-    labels = np.asarray([item[1] for item in data])
-    labels = np.array([get_label(label) for label in labels])
-
-    # Prepare train data
-    data = np.asarray([item[0] for item in data])
-    # max_words = 3000
-
-    # tokenizer = Tokenizer(num_words=max_words)
-    # tokenizer.fit_on_texts(data)
-    # dictionary = tokenizer.word_index
-
-    # with open('dictionary.json', 'w') as dictionary_file:
-    #     json.dump(dictionary, dictionary_file)
-
-    # allWordIndices = []
-
-    # for text in data:
-    #     wordIndices = convert_text_to_index_array(dictionary, text)
-    #     allWordIndices.append(wordIndices)
-
-    # allWordIndices = np.asarray(allWordIndices)
-
-    # data = tokenizer.sequences_to_matrix(allWordIndices, mode='binary')
-    return data, labels
 
 
 def make_model(data, labels):
     model = Sequential()
-    model.add(Dense(512, input_shape=(3000,), activation='relu'))
+    model.add(Dense(512, input_shape=(MAX_WORDS,), activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(256, activation='sigmoid'))
     model.add(Dropout(0.5))
@@ -136,8 +103,8 @@ def make_model(data, labels):
                   metrics=['accuracy'])
 
     model.fit(data, labels,
-              batch_size=32,
-              epochs=5,
+              batch_size=500,
+              epochs=10,
               verbose=1,
               validation_split=0.1,
               shuffle=True)
@@ -145,7 +112,37 @@ def make_model(data, labels):
     return model
 
 
-data_set = read_data(training_data, ['descr', 'category'])
+def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
+    """
+    Freezes the state of a session into a pruned computation graph.
+
+    Creates a new computation graph where variable nodes are replaced by
+    constants taking their current value in the session. The new graph will be
+    pruned so subgraphs that are not necessary to compute the requested
+    outputs are removed.
+    @param session The TensorFlow session to be frozen.
+    @param keep_var_names A list of variable names that should not be frozen,
+                          or None to freeze all the variables in the graph.
+    @param output_names Names of the relevant graph outputs.
+    @param clear_devices Remove the device directives from the graph for better portability.
+    @return The frozen graph definition.
+    """
+    graph = session.graph
+    with graph.as_default():
+        freeze_var_names = list(
+            set(v.op.name for v in tf.global_variables()).difference(keep_var_names or []))
+        output_names = output_names or []
+        output_names += [v.op.name for v in tf.global_variables()]
+        input_graph_def = graph.as_graph_def()
+        if clear_devices:
+            for node in input_graph_def.node:
+                node.device = ""
+        frozen_graph = tf.graph_util.convert_variables_to_constants(
+            session, input_graph_def, output_names, freeze_var_names)
+        return frozen_graph
+
+
+data_set = read_data(training_data, ['descr', 'category_extracted'])
 text = np.asarray([data[0] for data in data_set])
 
 training_labels = np.array([get_label(i[1]) for i in data_set])
@@ -154,6 +151,10 @@ tokenizer = build_words_tokenizer(text)
 training_data = data_to_indicies(text, tokenizer)
 model = make_model(training_data, training_labels)
 model.summary()
+frozen_graph = freeze_session(K.get_session(),
+                              output_names=[out.op.name for out in model.outputs])
+
+tf.train.write_graph(frozen_graph, "", "categorization.pb", as_text=False)
 
 
 testing_set = read_data(testing_data, ['descr', ])
@@ -162,8 +163,8 @@ item = testing_set[2][0]
 print "Testing set:", item
 
 item_indices = test_data_to_indicies(item, tokenizer)
-print item_indices
+# print item_indices
 pred = model.predict(item_indices)
-
+# ipdb.set_trace()
 print("%s item; category: %s, %f%% confidence" %
       (item, get_category_name(training_labels[np.argmax(pred)]), pred[0][np.argmax(pred)] * 100))
