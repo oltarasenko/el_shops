@@ -154,24 +154,35 @@ def freeze_session(session, keep_var_names=None, output_names=None, clear_device
 data_set = read_data(training_data, ['descr', 'category_extracted'])
 text = np.asarray([data[0] for data in data_set])
 
-training_labels = np.array([get_label(i[1]) for i in data_set])
 
+training_labels = np.array([get_label(i[1]) for i in data_set])
 tokenizer = build_words_tokenizer(text)
+
+dictionary = tokenizer.word_index
+# Let's save this out so we can use it later
+with open('dictionary.json', 'w') as dictionary_file:
+    json.dump(dictionary, dictionary_file)
 
 training_data = data_to_indicies(text, tokenizer)
 model = make_model(training_data, training_labels)
 model.summary()
-frozen_graph = freeze_session(K.get_session(),
-                              output_names=[out.op.name for out in model.outputs])
+# frozen_graph = freeze_session(K.get_session(),
+#                               output_names=[out.op.name for out in model.outputs])
 
-tf.train.write_graph(frozen_graph, "", "categorization.pb", as_text=False)
+# tf.train.write_graph(frozen_graph, "", "categorization.pb", as_text=False)
+
+
+model_json = model.to_json()
+with open('model.json', 'w') as json_file:
+    json_file.write(model_json)
+
+model.save_weights('model.h5')
 
 data_set = read_data(testing_data, ['descr', 'category_extracted'])
 
 testing_text = np.asarray([data[0] for data in data_set])
 testing_labels = np.array([get_label(i[1]) for i in data_set])
 
-# print map_data(testing_text, tokenizer)
 
 print "[error] Evaluating the model"
 time.sleep(5)
@@ -180,13 +191,3 @@ test_loss, test_acc = model.evaluate(
     data_to_indicies(testing_text, tokenizer), testing_labels)
 
 print "Loss: ", test_loss, "Accuracy:", test_acc
-# # ipdb.set_trace()
-# item = testing_set[2][0]
-# print "Testing set:", item
-
-# item_indices = test_data_to_indicies(item, tokenizer)
-# print item_indices
-# pred = model.predict(item_indices)
-# ipdb.set_trace()
-# print("%s item; category: %s, %f%% confidence" %
-#       (item, get_category_name(training_labels[np.argmax(pred)]), pred[0][np.argmax(pred)] * 100))
